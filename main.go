@@ -233,7 +233,7 @@ func main() {
 	// save updated labels with prestige
 	prestige_labels_txt = ""
 	for i := 0; i < len(site_list); i++ {
-		prestige_labels_txt += fmt.Sprintf(",%d [%f]", i, rank2_prestige_values[i])
+		prestige_labels_txt += fmt.Sprintf(",%d [%.2f]", i, rank2_prestige_values[i])
 	}
 
 	save_file("ranking2_prestige_labels.txt", prestige_labels_txt)
