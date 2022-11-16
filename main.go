@@ -6,9 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
-	"strings"
 
-	"github.com/gocolly/colly"
 	"golang.org/x/exp/slices"
 )
 
@@ -35,24 +33,50 @@ func save_json_file(name string, data any) {
 	}
 }
 
-func sort_map_by_value(input_map map[string]int) map[string]int {
-	keys := make([]string, 0, len(input_map))
-	for key := range input_map {
-		keys = append(keys, key)
+func read_json_file(name string) []byte {
+	jsonFile, err := os.Open(name)
+	if err != nil {
+		fmt.Printf("Error: %s", err.Error())
 	}
+	defer jsonFile.Close()
 
-	sort.Slice(keys, func(i, j int) bool {
-		return input_map[keys[i]] > input_map[keys[j]]
-	})
-
-	output_map := make(map[string]int)
-
-	for _, key := range keys {
-		output_map[key] = input_map[key]
-		fmt.Printf("%-7v %v\n", key, input_map[key])
-	}
-	return output_map
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	return byteValue
 }
+
+func read_site_map(name string) map[string][]string {
+	byteValue := read_json_file(name)
+	var result map[string][]string
+	json.Unmarshal([]byte(byteValue), &result)
+	return result
+}
+
+func read_site_map_order(name string) map[int]string {
+	byteValue := read_json_file(name)
+
+	var result map[int]string
+	json.Unmarshal([]byte(byteValue), &result)
+	return result
+}
+
+// func sort_map_by_value(input_map map[string]int) map[string]int {
+// 	keys := make([]string, 0, len(input_map))
+// 	for key := range input_map {
+// 		keys = append(keys, key)
+// 	}
+
+// 	sort.Slice(keys, func(i, j int) bool {
+// 		return input_map[keys[i]] > input_map[keys[j]]
+// 	})
+
+// 	output_map := make(map[string]int)
+
+// 	for _, key := range keys {
+// 		output_map[key] = input_map[key]
+// 		fmt.Printf("%-7v %v\n", key, input_map[key])
+// 	}
+// 	return output_map
+// }
 
 func sort_map_by_float_value(input_map map[string]float64) map[string]float64 {
 	keys := make([]string, 0, len(input_map))
@@ -73,64 +97,65 @@ func sort_map_by_float_value(input_map map[string]float64) map[string]float64 {
 	return output_map
 }
 
-func collect_data(site_url string, allowed_domains string) map[string][]string {
-	site_map := make(map[string][]string)
-	visited_site_count := 0
-	site_root := ""
+func calculate_ranking(adjacency_matix [][]float64, site_list []string) (rank_prestige_values []float64, ranking map[string]float64) {
+	visited_sites := make(map[string][]float64)
+	for i := 0; i < len(site_list); i++ {
+		// first value in array is 1 when site was visited and 0 if not, second value is prestige
+		visited_sites[site_list[i]] = []float64{0.0, 0.0}
+	}
 
-	c := colly.NewCollector(
-		// Visit only domains allowed domains
-		colly.AllowedDomains(allowed_domains),
-		colly.MaxDepth(3),
-	)
+	site_to_rank := []int{0}
+	visited_sites[site_list[0]] = []float64{1.0, 1.0}
+	for len(site_to_rank) > 0 {
+		current_site_index := site_to_rank[0]
+		current_row := adjacency_matix[current_site_index]
+		current_prestige := visited_sites[site_list[current_site_index]][1]
 
-	// On every a element which has href attribute call callback
-	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
-		link := e.Attr("href")
-		// Print link
-		// Visit link found on page
-		// Only those links are visited which are in AllowedDomains
-		temp_list := site_map[site_root]
-		current_link := e.Request.AbsoluteURL(link)
-		//TODO: remove second condition to see whether this affects rankings
-		// if !slices.Contains(temp_list, current_link) && (current_link != site_root) {
-		if !slices.Contains(temp_list, current_link) {
-			if strings.Contains(current_link, allowed_domains) {
-				site_map[site_root] = append(temp_list, current_link)
+		visited_sites[site_list[current_site_index]][0] = 1
+		for j := 0; j < len(current_row); j++ {
+			// not calulate cycles
+			calculated_site_index := site_list[j]
+			if visited_sites[calculated_site_index][0] == 0 {
+				visited_sites[calculated_site_index][1] += current_row[j] * current_prestige
+				if current_row[j] != 0 {
+					site_to_rank = append(site_to_rank, j)
+				}
 			}
 		}
-		if visited_site_count < 100 {
-			c.Visit(e.Request.AbsoluteURL(link))
-		}
-	})
+		site_to_rank = site_to_rank[1:]
+	}
 
-	c.OnRequest(func(r *colly.Request) {
-		visited_site_count++
-		site_root = r.URL.String()
-		site_map[site_root] = []string{}
-	})
+	rank_prestige_values = []float64{}
+	ranking = make(map[string]float64)
 
-	c.Visit(site_url)
-	fmt.Println("Visited ", visited_site_count, " sites")
-	return site_map
+	for i := 0; i < len(site_list); i++ {
+		key := site_list[i]
+		ranking[key] = visited_sites[key][1]
+		rank_prestige_values = append(rank_prestige_values, visited_sites[key][1])
+	}
+	// save_json_file("ranking_test.json", visited_sites)
+	return
 }
 
 func main() {
-	site_map := collect_data("https://flyingwildhog.com/", "flyingwildhog.com")
-	// task 1: print site map
-	save_json_file("site_list.json", site_map)
+	// source_site_name := "http://flyingwildhog.com/careers/"
+	// site_map, in_order_site_map := collect_data(source_site_name, "flyingwildhog.com")
+	// // task 1: print site map - for first run
+	// save_json_file("site_list.json", site_map)
+	// save_json_file("site_list_order.json", in_order_site_map)
 
+	// task 1: read existing site structure - for next runs
+	site_map := read_site_map("site_list.json")
+	in_order_site_map := read_site_map_order("site_list_order.json")
 	// task 1: create site list
 	site_list := []string{}
-	site_indexes := make(map[string]int)
-	idx := 0
-	for key := range site_map {
-		site_list = append(site_list, key)
-		site_indexes[key] = idx
-		idx++
+	for i := 0; i < len(in_order_site_map); i++ {
+		site_name := in_order_site_map[i]
+		site_list = append(site_list, site_name)
+
 	}
 
-	sort.Strings(site_list)
+	// sort.Strings(site_list)
 
 	out_string := ""
 	for _, data := range site_list {
@@ -141,7 +166,7 @@ func main() {
 
 	// task 2: create adjacency matrix for site_map
 	adj_matrix_txt := ""
-	adj_matrix := [][]int{}
+	adj_matrix := [][]float64{}
 	for i := 0; i < len(site_list); i++ {
 		adj_matrix_txt += fmt.Sprintf(",%d", i)
 	}
@@ -149,7 +174,7 @@ func main() {
 	for i := 0; i < len(site_list); i++ {
 		column := site_list[i]
 		adj_matrix_txt += fmt.Sprintf("%d", i)
-		column_values := []int{}
+		column_values := []float64{}
 		for j := 0; j < len(site_list); j++ {
 			row := site_list[j]
 			if slices.Contains(site_map[column], row) {
@@ -167,65 +192,48 @@ func main() {
 	save_file("adj_matrix.txt", adj_matrix_txt)
 
 	// task 3: create first ranking
-	rank1_prestige_values := []int{}
-	ranking1 := make(map[string]int)
-	for i := 0; i < len(adj_matrix[0]); i++ {
-		sum := 0
-		for j := 0; j < len(adj_matrix); j++ {
-			site_prestige := 1
-			if strings.Contains(site_list[j], "game") || (strings.Contains(site_list[j], "evil-west")) {
-				site_prestige = 3
-			} else if strings.Contains(site_list[j], "career") || (strings.Contains(site_list[j], "contact")) {
-				site_prestige = 2
-			}
-			// don't calculate cycles
-			if i != j {
-				sum += adj_matrix[j][i] * site_prestige
-			}
-		}
-		rank1_prestige_values = append(rank1_prestige_values, sum)
-		ranking1[site_list[i]] = sum
-	}
+	rank1_prestige_values, ranking1 := calculate_ranking(adj_matrix, site_list)
 
 	fmt.Println("ranking 1:")
-	ranking1 = sort_map_by_value(ranking1)
+	ranking1 = sort_map_by_float_value(ranking1)
 
 	save_json_file("ranking_1.json", ranking1)
 
 	// save updated labels with prestige
 	prestige_labels_txt := ""
 	for i := 0; i < len(site_list); i++ {
-		prestige_labels_txt += fmt.Sprintf(",%d [%d]", i, rank1_prestige_values[i])
+		prestige_labels_txt += fmt.Sprintf(",%d [%f]", i, rank1_prestige_values[i])
 	}
 
 	save_file("ranking1_prestige_labels.txt", prestige_labels_txt)
 
 	// task 4-5: create second ranking
-	rank2_prestige_values := []float64{}
-	ranking2 := make(map[string]float64)
-	for i := 0; i < len(adj_matrix[0]); i++ {
-		sum := 0.0
-		for j := 0; j < len(adj_matrix); j++ {
-			site_prestige := 1.0
-			if strings.Contains(site_list[j], "game") || (strings.Contains(site_list[j], "evil-west")) {
-				site_prestige = 3
-			} else if strings.Contains(site_list[j], "career") || (strings.Contains(site_list[j], "contact")) {
-				site_prestige = 2
-			}
-			// don't calculate cycles
-			if i != j {
+
+	updated_adj_matrix := [][]float64{}
+
+	for i := 0; i < len(site_list); i++ {
+		column := site_list[i]
+		column_values := []float64{}
+		for j := 0; j < len(site_list); j++ {
+			row := site_list[j]
+			if slices.Contains(site_map[column], row) {
 				Nv := 0.0
-				for k := 0; k < len(adj_matrix[j]); k++ {
-					Nv += float64(adj_matrix[j][k])
+				for k := 0; k < len(adj_matrix[i]); k++ {
+					Nv += float64(adj_matrix[i][k])
 				}
-				if Nv != 0 {
-					sum += (1.0 / Nv) * site_prestige
+				if Nv != 0.0 {
+					column_values = append(column_values, (1.0 / Nv))
+				} else {
+					column_values = append(column_values, 0.0)
 				}
+			} else {
+				column_values = append(column_values, 0.0)
 			}
 		}
-		rank2_prestige_values = append(rank2_prestige_values, sum)
-		ranking2[site_list[i]] = sum
+		updated_adj_matrix = append(updated_adj_matrix, column_values)
 	}
+
+	rank2_prestige_values, ranking2 := calculate_ranking(updated_adj_matrix, site_list)
 
 	fmt.Println("ranking 2:")
 	ranking2 = sort_map_by_float_value(ranking2)
