@@ -92,12 +92,14 @@ func collect_data(site_url string, allowed_domains string) map[string][]string {
 		// Only those links are visited which are in AllowedDomains
 		temp_list := site_map[site_root]
 		current_link := e.Request.AbsoluteURL(link)
-		if !slices.Contains(temp_list, current_link) && (current_link != site_root) {
+		//TODO: remove second condition to see whether this affects rankings
+		// if !slices.Contains(temp_list, current_link) && (current_link != site_root) {
+		if !slices.Contains(temp_list, current_link) {
 			if strings.Contains(current_link, allowed_domains) {
 				site_map[site_root] = append(temp_list, current_link)
 			}
 		}
-		if visited_site_count < 30 {
+		if visited_site_count < 100 {
 			c.Visit(e.Request.AbsoluteURL(link))
 		}
 	})

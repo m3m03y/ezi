@@ -15,12 +15,10 @@ labels = input_data[0][1:]
 
 for i in range(len(labels)):
     current = eigenvalues[0][i]
-    site_ranking[site_names[i]] = abs(float(current))
+    site_ranking[site_names[i]] = abs(float(current.real))
 
-print(site_ranking)
 
 site_ranking = dict(sorted(site_ranking.items(), key=lambda item: item[1], reverse=True))
-print(site_ranking)
 
 prestige_labels_txt = ""
 for i in range(len(site_names)):
@@ -30,5 +28,5 @@ for i in range(len(site_names)):
 with open('ranking3_prestige_labels.txt', 'w') as fp:
     fp.write(prestige_labels_txt)
     
-with open('ranking3.json', 'w') as fp:
+with open('ranking_3.json', 'w') as fp:
     json.dump(site_ranking, fp)
