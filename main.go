@@ -118,8 +118,8 @@ func calculate_ranking(adjacency_matix [][]float64, site_list []string) (rank_pr
 }
 
 func main() {
-	// source_site_name := "https://flyingwildhog.com/careers/"
-	// site_map, in_order_site_map := collect_data(source_site_name, "flyingwildhog.com")
+	// source_site_name := "https://naukowybelkot.pl/"
+	// site_map, in_order_site_map := collect_data(source_site_name, "naukowybelkot.pl")
 	// // task 1: print site map - for first run
 	// save_json_file("site_list.json", site_map)
 	// save_json_file("site_list_order.json", in_order_site_map)
@@ -130,6 +130,7 @@ func main() {
 	// task 1: create site list
 	site_list := []string{}
 	for i := 0; i < len(in_order_site_map); i++ {
+		// for i := 0; i < 10; i++ {
 		site_name := in_order_site_map[i]
 		site_list = append(site_list, site_name)
 
@@ -188,9 +189,14 @@ func main() {
 	// task 4-5: create second ranking
 
 	updated_adj_matrix := [][]float64{}
-
+	updated_adj_matrix_txt := ""
+	for i := 0; i < len(site_list); i++ {
+		updated_adj_matrix_txt += fmt.Sprintf(",%d", i)
+	}
+	updated_adj_matrix_txt += "\n"
 	for i := 0; i < len(site_list); i++ {
 		column := site_list[i]
+		updated_adj_matrix_txt += fmt.Sprintf("%d", i)
 		column_values := []float64{}
 		for j := 0; j < len(site_list); j++ {
 			row := site_list[j]
@@ -201,15 +207,20 @@ func main() {
 				}
 				if Nv != 0.0 {
 					column_values = append(column_values, (1.0 / Nv))
+					updated_adj_matrix_txt += fmt.Sprintf(",%f", (1.0 / Nv))
 				} else {
 					column_values = append(column_values, 0.0)
+					updated_adj_matrix_txt += fmt.Sprintf(",%f", 0.0)
 				}
 			} else {
 				column_values = append(column_values, 0.0)
+				updated_adj_matrix_txt += fmt.Sprintf(",%f", 0.0)
 			}
 		}
 		updated_adj_matrix = append(updated_adj_matrix, column_values)
+		updated_adj_matrix_txt += "\n"
 	}
+	save_file("updated_adj_matrix.txt", updated_adj_matrix_txt)
 
 	rank2_prestige_values, ranking2 := calculate_ranking(updated_adj_matrix, site_list)
 
