@@ -82,11 +82,11 @@ func calculate_ranking(adjacency_matix [][]float64, site_list []string) (rank_pr
 	visited_sites := make(map[string][]float64)
 	for i := 0; i < len(site_list); i++ {
 		// first value in array is 1 when site was visited and 0 if not, second value is prestige
-		visited_sites[site_list[i]] = []float64{0.0, 0.0}
+		visited_sites[site_list[i]] = []float64{0.0, 1.0} // set initial prestige to 1
 	}
 
 	site_to_rank := []int{0}
-	visited_sites[site_list[0]] = []float64{1.0, 1.0}
+	// visited_sites[site_list[0]] = []float64{1.0, 1.0}
 	for len(site_to_rank) > 0 {
 		current_site_index := site_to_rank[0]
 		current_row := adjacency_matix[current_site_index]
@@ -118,18 +118,17 @@ func calculate_ranking(adjacency_matix [][]float64, site_list []string) (rank_pr
 }
 
 func main() {
-	source_site_name := "https://flyingwildhog.com/careers/"
-	site_map, in_order_site_map := collect_data(source_site_name, "flyingwildhog.com")
-	// task 1: print site map - for first run
-	save_json_file("site_list.json", site_map)
-	save_json_file("site_list_order.json", in_order_site_map)
+	// source_site_name := "https://flyingwildhog.com/careers/"
+	// site_map, in_order_site_map := collect_data(source_site_name, "flyingwildhog.com")
+	// // task 1: print site map - for first run
+	// save_json_file("site_list.json", site_map)
+	// save_json_file("site_list_order.json", in_order_site_map)
 
 	// task 1: read existing site structure - for next runs
-	// site_map := read_site_map("site_list.json")
-	// in_order_site_map := read_site_map_order("site_list_order.json")
+	site_map := read_site_map("site_list.json")
+	in_order_site_map := read_site_map_order("site_list_order.json")
 	// task 1: create site list
 	site_list := []string{}
-	// for i := 0; i < len(in_order_site_map); i++ {
 	for i := 0; i < len(in_order_site_map); i++ {
 		site_name := in_order_site_map[i]
 		site_list = append(site_list, site_name)
