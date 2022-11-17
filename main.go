@@ -59,25 +59,6 @@ func read_site_map_order(name string) map[int]string {
 	return result
 }
 
-// func sort_map_by_value(input_map map[string]int) map[string]int {
-// 	keys := make([]string, 0, len(input_map))
-// 	for key := range input_map {
-// 		keys = append(keys, key)
-// 	}
-
-// 	sort.Slice(keys, func(i, j int) bool {
-// 		return input_map[keys[i]] > input_map[keys[j]]
-// 	})
-
-// 	output_map := make(map[string]int)
-
-// 	for _, key := range keys {
-// 		output_map[key] = input_map[key]
-// 		fmt.Printf("%-7v %v\n", key, input_map[key])
-// 	}
-// 	return output_map
-// }
-
 func sort_map_by_float_value(input_map map[string]float64) map[string]float64 {
 	keys := make([]string, 0, len(input_map))
 	for key := range input_map {
@@ -133,29 +114,27 @@ func calculate_ranking(adjacency_matix [][]float64, site_list []string) (rank_pr
 		ranking[key] = visited_sites[key][1]
 		rank_prestige_values = append(rank_prestige_values, visited_sites[key][1])
 	}
-	// save_json_file("ranking_test.json", visited_sites)
 	return
 }
 
 func main() {
-	// source_site_name := "http://flyingwildhog.com/careers/"
-	// site_map, in_order_site_map := collect_data(source_site_name, "flyingwildhog.com")
-	// // task 1: print site map - for first run
-	// save_json_file("site_list.json", site_map)
-	// save_json_file("site_list_order.json", in_order_site_map)
+	source_site_name := "https://flyingwildhog.com/careers/"
+	site_map, in_order_site_map := collect_data(source_site_name, "flyingwildhog.com")
+	// task 1: print site map - for first run
+	save_json_file("site_list.json", site_map)
+	save_json_file("site_list_order.json", in_order_site_map)
 
 	// task 1: read existing site structure - for next runs
-	site_map := read_site_map("site_list.json")
-	in_order_site_map := read_site_map_order("site_list_order.json")
+	// site_map := read_site_map("site_list.json")
+	// in_order_site_map := read_site_map_order("site_list_order.json")
 	// task 1: create site list
 	site_list := []string{}
+	// for i := 0; i < len(in_order_site_map); i++ {
 	for i := 0; i < len(in_order_site_map); i++ {
 		site_name := in_order_site_map[i]
 		site_list = append(site_list, site_name)
 
 	}
-
-	// sort.Strings(site_list)
 
 	out_string := ""
 	for _, data := range site_list {

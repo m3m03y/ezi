@@ -13,7 +13,7 @@ func collect_data(site_url string, allowed_domains string) (site_map map[string]
 	in_order_site_map = make(map[int]string)
 	visited_site_count := 0
 	site_root := ""
-
+	site_queue := []string{site_url}
 	c := colly.NewCollector(
 		// Visit only domains allowed domains
 		colly.AllowedDomains(allowed_domains),
@@ -28,14 +28,17 @@ func collect_data(site_url string, allowed_domains string) (site_map map[string]
 		// Only those links are visited which are in AllowedDomains
 		temp_list := site_map[site_root]
 		current_link := e.Request.AbsoluteURL(link)
-		//TODO: remove second condition to see whether this affects rankings
-		// if !slices.Contains(temp_list, current_link) && (current_link != site_root) {
+
 		if !slices.Contains(temp_list, current_link) {
 			if strings.Contains(current_link, allowed_domains) {
 				site_map[site_root] = append(temp_list, current_link)
 			}
 		}
-		c.Visit(e.Request.AbsoluteURL(link))
+		// check if site exist in site_map
+		if _, site_exist := site_map[current_link]; !site_exist {
+			site_queue = append(site_queue, link)
+		}
+		// c.Visit(e.Request.AbsoluteURL(link))
 	})
 
 	c.OnRequest(func(r *colly.Request) {
@@ -45,7 +48,12 @@ func collect_data(site_url string, allowed_domains string) (site_map map[string]
 		visited_site_count++
 	})
 
-	c.Visit(site_url)
+	site_queue = append(site_queue, site_url)
+	for len(site_queue) > 0 {
+		current_link := site_queue[0]
+		site_queue = site_queue[1:]
+		c.Visit(current_link)
+	}
 	fmt.Println("Visited ", visited_site_count, " sites")
 	return
 }
